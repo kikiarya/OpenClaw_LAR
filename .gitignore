@@ -1,0 +1,4 @@
+﻿*.jsonl
+*.json
+triviaqa_qwen/
+analysis/
