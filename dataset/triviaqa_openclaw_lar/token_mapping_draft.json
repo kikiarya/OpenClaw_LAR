@@ -1,0 +1,10 @@
+{
+  "special_tokens": [],
+  "token_mapping": {},
+  "metadata": {
+    "min_coverage": 0.95,
+    "auto_selected_fields": [],
+    "manual_count": 0,
+    "total_tokens": 0
+  }
+}
