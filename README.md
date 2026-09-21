@@ -127,9 +127,9 @@ pip install torch transformers datasets peft accelerate numpy tqdm requests flas
 
 The training script enables Transformers offline mode and uses `local_files_only=True`. Download the base model before launching training or adapt that policy for your environment.
 
-### Historical configuration record / 历史配置记录
+### Completed experiment configurations / 已完成实验配置
 
-The original OpenClaw adaptation was prepared as a two-group comparison on 5,000 TriviaQA examples:
+The original OpenClaw adaptation was completed as a two-group comparison on 5,000 TriviaQA examples:
 
 - **Vanilla** - the full OpenClaw system prompt.
 - **Replace + LoRA** - the selected long static system-prompt span replaced by `<seg_0>`, with LoRA parameters and the new token embedding trained through teacher-student distillation.
@@ -137,7 +137,7 @@ The original OpenClaw adaptation was prepared as a two-group comparison on 5,000
 - **Training hardware** - an 8 x A800 80 GB server; the recorded launch used four worker processes.
 - **Environment** - Conda with Python 3.10, PyTorch 2.4.0 + CUDA 12.1 on a CUDA 12.6-capable driver.
 
-At the time of the setup note, `torch.cuda.is_available()` returned `True`; `torch`, `transformers`, `peft`, `accelerate`, and `datasets` were installed, while `flash-attn` was the remaining training dependency. The local `utils.py` module only imports Python standard-library modules.
+In the recorded environment, `torch.cuda.is_available()` returned `True`; `torch`, `transformers`, `peft`, `accelerate`, `datasets`, and the required FlashAttention support were available for training. The local `utils.py` module only imports Python standard-library modules.
 
 The recorded dataset layout was:
 
@@ -203,7 +203,9 @@ python scripts/merge_llm_input_output_for_sft.py \
 
 ## Training
 
-The recorded four-process Qwen3-8B launch was:
+### Configuration A: static `<seg_0>`, four processes
+
+This completed run used four Qwen3-8B worker processes:
 
 ```bash
 export MODEL_PATH=/path/to/Qwen3-8B
@@ -222,6 +224,28 @@ torchrun --nproc_per_node=4 train.py \
 ```
 
 Parameters not shown use the current script defaults: `max_length=4096`, `learning_rate=1e-4`, `lora_r=8`, `lora_alpha=16`, `temperature=2.0`, and `teacher_student_ratio=2:2`.
+
+### Configuration B: short `<seg_0>`, single process
+
+This completed run used the shorter static-segment mapping, a per-device batch size of four, and full KL weighting:
+
+```bash
+export WORKDIR=/path/to/LatentMemory
+export MODEL_PATH=/path/to/Qwen3-8B
+
+cd "$WORKDIR"
+python train.py \
+  --dataset_dir dataset/triviaqa_openclaw_lar \
+  --mapping dataset/triviaqa_openclaw_lar/token_mapping_static_seg0_short.json \
+  --output_dir weight/triviaqa_openclaw_lar_short/full_5000 \
+  --train_new_embeddings_only \
+  --model_name "$MODEL_PATH" \
+  --teacher_model_name "$MODEL_PATH" \
+  --epochs 3 \
+  --use_kl_distillation \
+  --batch_size 4 \
+  --kl_weight 1.0
+```
 
 GPU placement depends on `torchrun`, `LOCAL_RANK`, the number of visible devices, and `--teacher_device`. Inspect the printed placement summary before starting a long run.
 
