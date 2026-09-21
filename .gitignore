@@ -2,3 +2,4 @@
 *.json
 triviaqa_qwen/
 analysis/
+docs
